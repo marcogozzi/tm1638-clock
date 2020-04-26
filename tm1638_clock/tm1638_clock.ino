@@ -1,6 +1,8 @@
 #include <TM1638.h>
 
-TM1638 tm (8, 9, 7);
+#define DATAPIN 8
+#define CLKPIN 7
+#define STBPIN 6
 
 unsigned long waitcheckTime=0;
 unsigned long waitcheckButtons=0;
@@ -12,6 +14,10 @@ unsigned long gapSecond=0;
 boolean dots=0;
 
 boolean moduleOff=0;
+byte intensity=0;
+byte pos=2;
+
+TM1638 tm = TM1638(DATAPIN, CLKPIN, STBPIN, true, intensity);
 
 void setup(){
   waitcheckTime = intervalcheckTime;
@@ -36,7 +42,7 @@ void checkButtons(){
     tm.setLEDs(0);
     byte buttons=tm.getButtons();
     if(buttons>0){
-      for (byte i=0;i<6;i++){
+      for (byte i=0;i<8;i++){
         if ((buttons & 1<<i) != 0) {
           buttonEvent(i);
           waitcheckButtons +=intervalcheckButtons;
@@ -52,8 +58,6 @@ void drawToModule(){
   if (!moduleOff){
     unsigned long elapSecond = round(millis() / 1000);
     unsigned long totalSecond = gapSecond + elapSecond;
-    byte pos = totalSecond % 4;
-    if (pos>2) pos=1;
     tm.clearDisplay();
     tm.setDisplayToString(formatTime(totalSecond),(dots * 80),pos);
   }
@@ -61,8 +65,12 @@ void drawToModule(){
 
 
 void buttonEvent(byte inp){
-  tm.setLED((inp % 2 ) + 1,inp);
   switch (inp) {
+  case 7:
+    intensity = ( intensity + 1 ) % 8;
+    tm.setupDisplay(true, intensity);
+    tm.setLEDs((1 << (intensity + 1)) - 1);
+    return;
   case 0:
     if (hour(gapSecond) != 23)    {  
       gapSecond += 3600    ; 
@@ -103,10 +111,10 @@ void buttonEvent(byte inp){
     if (moduleOff) tm.clearDisplay();
     break;
   case 6:
-    break;
-  case 7:
+    pos = (pos + 1) % 3;
     break;
   }
+  tm.setLED(TM1638_COLOR_GREEN + TM1638_COLOR_RED, inp);
 }
 
 
